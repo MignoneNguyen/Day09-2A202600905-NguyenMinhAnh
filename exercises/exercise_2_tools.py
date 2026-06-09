@@ -26,8 +26,14 @@ LEGAL_KNOWLEDGE = [
             "(4) cover damages. Statute of limitations is typically 4 years (UCC § 2-725)."
         ),
     },
-    # TODO: Thêm entry về luật lao động Việt Nam
-    # Gợi ý: id="labor_law", keywords=["lao động", "sa thải", ...], text="..."
+    {
+        "id": "labor_law",
+        "keywords": ["lao động", "sa thải", "bồi thường", "hợp đồng lao động", "labor"],
+        "text": (
+            "Theo Bộ luật Lao động Việt Nam, nếu người sử dụng lao động đơn phương chấm dứt hợp đồng "
+            "trái pháp luật thì phải nhận người lao động trở lại làm việc và bồi thường ít nhất 2 tháng tiền lương."
+        ),
+    },
 ]
 
 
@@ -41,13 +47,16 @@ def search_legal_knowledge(query: str) -> str:
     return "Không tìm thấy thông tin liên quan."
 
 
-# TODO: Tạo tool check_statute_of_limitations
-# Gợi ý: nhận case_type (str), trả về thời hiệu khởi kiện
-# @tool
-# def check_statute_of_limitations(case_type: str) -> str:
-#     """Kiểm tra thời hiệu khởi kiện."""
-#     # YOUR CODE HERE
-#     pass
+@tool
+def check_statute_of_limitations(case_type: str) -> str:
+    """Kiểm tra thời hiệu khởi kiện cho các loại vụ án."""
+    case_type = case_type.lower()
+    if "hợp đồng" in case_type or "contract" in case_type:
+        return "Thời hiệu khởi kiện đối với tranh chấp hợp đồng là 3 năm (theo Bộ luật Dân sự Việt Nam)."
+    elif "lao động" in case_type or "labor" in case_type:
+        return "Thời hiệu yêu cầu Toà án giải quyết tranh chấp lao động cá nhân là 1 năm."
+    else:
+        return "Thời hiệu khởi kiện chung là 2 năm."
 
 
 async def main():
@@ -55,7 +64,7 @@ async def main():
     llm = get_llm()
     
     # TODO: Thêm tool mới vào danh sách
-    tools = [search_legal_knowledge]  # Thêm check_statute_of_limitations vào đây
+    tools = [search_legal_knowledge, check_statute_of_limitations]
     llm_with_tools = llm.bind_tools(tools)
     
     question = "Thời hiệu khởi kiện vụ vi phạm hợp đồng là bao lâu?"
@@ -79,7 +88,8 @@ async def main():
             
             if tool_call["name"] == "search_legal_knowledge":
                 tool_result = search_legal_knowledge.invoke(tool_call["args"])
-            # TODO: Thêm xử lý cho check_statute_of_limitations
+            elif tool_call["name"] == "check_statute_of_limitations":
+                tool_result = check_statute_of_limitations.invoke(tool_call["args"])
             
             if tool_result:
                 messages.append(ToolMessage(content=tool_result, tool_call_id=tool_call["id"]))

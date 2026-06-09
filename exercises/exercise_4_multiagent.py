@@ -60,7 +60,9 @@ def check_routing(state: State) -> list[Send]:
         tasks.append(Send("compliance_agent", state))
     
     # YOUR CODE HERE: thêm điều kiện cho privacy_agent
-    
+    if any(kw in question_lower for kw in ["data", "privacy", "gdpr", "dữ liệu", "bảo mật"]):
+        tasks.append(Send("privacy_agent", state))
+        
     return tasks if tasks else [Send("aggregate_results", state)]
 
 
@@ -95,10 +97,16 @@ Tập trung: SEC, SOX, FCPA, AML, regulatory violations."""
 # TODO: Implement privacy_agent
 def privacy_agent(state: State) -> dict:
     """Agent chuyên về bảo vệ dữ liệu cá nhân và GDPR."""
-    # YOUR CODE HERE
-    # Gợi ý: tương tự tax_agent và compliance_agent
-    # Tập trung: GDPR, data protection, privacy rights, data breach
-    pass
+    llm = get_llm()
+    prompt = f"""Bạn là chuyên gia về bảo mật dữ liệu. Phân tích khía cạnh bảo mật:
+
+Câu hỏi: {state['question']}
+Phân tích pháp lý: {state.get('law_analysis', 'N/A')}
+
+Tập trung: GDPR, data protection, privacy rights, data breach, luật An ninh mạng."""
+    
+    response = llm.invoke([HumanMessage(content=prompt)])
+    return {"privacy_analysis": response.content}
 
 
 def aggregate_results(state: State) -> dict:
@@ -113,6 +121,8 @@ def aggregate_results(state: State) -> dict:
     if state.get("compliance_analysis"):
         sections.append(f"✅ PHÂN TÍCH TUÂN THỦ:\n{state['compliance_analysis']}")
     # TODO: Thêm privacy_analysis vào sections
+    if state.get("privacy_analysis"):
+        sections.append(f"🔒 PHÂN TÍCH BẢO MẬT:\n{state['privacy_analysis']}")
     
     combined = "\n\n".join(sections)
     
@@ -138,6 +148,7 @@ def build_graph() -> StateGraph:
     graph.add_node("tax_agent", tax_agent)
     graph.add_node("compliance_agent", compliance_agent)
     # TODO: Thêm privacy_agent node
+    graph.add_node("privacy_agent", privacy_agent)
     graph.add_node("aggregate_results", aggregate_results)
     
     # Define edges
@@ -147,6 +158,7 @@ def build_graph() -> StateGraph:
     graph.add_edge("tax_agent", "aggregate_results")
     graph.add_edge("compliance_agent", "aggregate_results")
     # TODO: Thêm edge từ privacy_agent đến aggregate_results
+    graph.add_edge("privacy_agent", "aggregate_results")
     graph.add_edge("aggregate_results", END)
     
     return graph.compile()

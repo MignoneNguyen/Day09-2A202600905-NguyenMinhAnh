@@ -81,12 +81,41 @@ LEGAL_KNOWLEDGE = [
             "public interest (Winter v. Natural Resources Defense Council, 2008)."
         ),
     },
+    {
+    "id": "labor_law",
+    "keywords": ["lao động", "sa thải", "hợp đồng lao động", "labor", "termination"],
+    "text": (
+        "Theo Bộ luật Lao động Việt Nam 2019, người sử dụng lao động có thể "
+        "đơn phương chấm dứt hợp đồng trong các trường hợp: (1) người lao động "
+        "thường xuyên không hoàn thành công việc; (2) bị ốm đau, tai nạn đã điều trị "
+        "12 tháng chưa khỏi; (3) thiên tai, hỏa hoạn; (4) người lao động đủ tuổi nghỉ hưu."
+    ),
+    }
 ]
 
 
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
+
+def load_markdown_data():
+    docs = []
+    data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data")
+    for root, _, files in os.walk(data_dir):
+        for file in files:
+            if file.endswith(".md"):
+                filepath = os.path.join(root, file)
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    # Split into paragraphs to keep context window small
+                    paragraphs = [p.strip() for p in content.split('\n\n') if len(p.strip()) > 50]
+                    docs.extend(paragraphs)
+                except Exception:
+                    pass
+    return docs
+
+MARKDOWN_DOCS = load_markdown_data()
 
 @tool
 def search_legal_database(query: str) -> str:
@@ -105,6 +134,34 @@ def search_legal_database(query: str) -> str:
     for _, entry in top:
         results.append(f"[{entry['id']}] {entry['text']}")
     return "\n\n".join(results)
+
+# Adjusted func for vietnamese legal docs
+# @tool
+# def search_legal_database(query: str) -> str:
+#     """Search the legal knowledge base and markdown files for relevant statutes, case law, and legal principles."""
+#     query_words = set(query.lower().split())
+#     results = []
+    
+#     # 1. Search in hardcoded LEGAL_KNOWLEDGE
+#     for entry in LEGAL_KNOWLEDGE:
+#         overlap = len(query_words & set(entry["keywords"]))
+#         if overlap > 0:
+#             results.append((overlap, f"[{entry['id']}] {entry['text']}"))
+            
+#     # 2. Search in MARKDOWN_DOCS
+#     for doc in MARKDOWN_DOCS:
+#         doc_lower = doc.lower()
+#         overlap = sum(1 for w in query_words if w in doc_lower)
+#         if overlap > 0:
+#             results.append((overlap, doc))
+            
+#     results.sort(key=lambda x: x[0], reverse=True)
+#     top = results[:3] # return top 3 chunks to avoid token limits
+    
+#     if not top:
+#         return "No relevant legal sources found for this query."
+        
+#     return "\n\n".join([doc for _, doc in top])
 
 
 @tool
@@ -134,11 +191,23 @@ def calculate_damages(breach_type: str, contract_value: float) -> str:
         f"  Total estimated exposure: ${total:,.2f}"
     )
 
+@tool
+def check_statute_of_limitations(case_type: str) -> str:
+    """Kiểm tra thời hiệu khởi kiện theo loại vụ án.
+    
+    Args:
+        case_type: Loại vụ án (contract, tort, property)
+    """
+    limits = {
+        "contract": "4 năm (UCC § 2-725)",
+        "tort": "2-3 năm tùy bang",
+        "property": "5 năm",
+    }
+    return limits.get(case_type.lower(), "Không xác định")
 
-TOOLS = [search_legal_database, calculate_damages]
+TOOLS = [search_legal_database, calculate_damages, check_statute_of_limitations]
 
-QUESTION = "What are the legal consequences if a company breaches a non-disclosure agreement?"
-
+QUESTION = "According to recent news articles and anti-drug laws, what legal consequences might someone face for organizing the illegal use of drugs (like the case of singer Miu Le)?"
 
 async def main():
     print("=" * 70)

@@ -25,7 +25,10 @@ async def main() -> None:
     print(f"Question: {QUESTION}")
     print("-" * 60)
 
-    async with httpx.AsyncClient(timeout=300.0) as http_client:
+    expected_key = os.getenv("A2A_API_KEY", "secret-key-123")
+    headers = {"Authorization": f"Bearer {expected_key}"}
+    
+    async with httpx.AsyncClient(timeout=300.0, headers=headers) as http_client:
         # Resolve agent card
         card_url = f"{CUSTOMER_AGENT_URL}/.well-known/agent.json"
         try:
